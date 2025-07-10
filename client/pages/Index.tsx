@@ -2,6 +2,8 @@ import { Download } from "lucide-react";
 import Navigation from "@/components/Navigation";
 
 export default function Index() {
+  console.log('Index component is rendering...');
+  
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
