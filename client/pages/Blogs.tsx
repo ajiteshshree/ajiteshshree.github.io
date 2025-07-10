@@ -8,6 +8,7 @@ import {
   deleteBlogPost, 
   subscribeToBlogPosts 
 } from "@/lib/blogService";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Helper function to calculate read time
 const calculateReadTime = (content: string): string => {
@@ -30,6 +31,9 @@ export default function Blogs() {
     content: "",
     image: ""
   });
+
+  // Get authentication state
+  const { isAdmin } = useAuth();
 
   // Subscribe to real-time updates from Firestore
   useEffect(() => {
@@ -57,6 +61,10 @@ export default function Blogs() {
   };
 
   const handleAddBlog = () => {
+    if (!isAdmin) {
+      alert('You must be logged in as an admin to create blog posts');
+      return;
+    }
     setFormData({
       title: "",
       excerpt: "",
@@ -79,6 +87,10 @@ export default function Blogs() {
   };
 
   const handleEditBlog = (blog: BlogPost) => {
+    if (!isAdmin) {
+      alert('You must be logged in as an admin to edit blog posts');
+      return;
+    }
     setEditingBlog(blog);
     setFormData({
       title: blog.title,
@@ -102,6 +114,10 @@ export default function Blogs() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAdmin) {
+      alert('You must be logged in as an admin to save blog posts');
+      return;
+    }
     if (!formData.title || !formData.excerpt || !formData.content) {
       alert("Please fill in all required fields");
       return;
@@ -147,6 +163,10 @@ export default function Blogs() {
   };
 
   const handleDeleteBlog = async (blogId: string) => {
+    if (!isAdmin) {
+      alert('You must be logged in as an admin to delete blog posts');
+      return;
+    }
     if (confirm("Are you sure you want to delete this blog post?")) {
       try {
         await deleteBlogPost(blogId);
@@ -203,13 +223,15 @@ export default function Blogs() {
                   Thoughts, insights, and stories from my journey
                 </p>
               </div>
-              <button
-                onClick={handleAddBlog}
-                className="bg-foreground hover:bg-foreground/90 text-background px-6 py-3 rounded-lg flex items-center gap-2 transition-colors font-medium"
-              >
-                <Plus className="h-4 w-4" />
-                New Post
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={handleAddBlog}
+                  className="bg-foreground hover:bg-foreground/90 text-background px-6 py-3 rounded-lg flex items-center gap-2 transition-colors font-medium"
+                >
+                  <Plus className="h-4 w-4" />
+                  New Post
+                </button>
+              )}
             </div>
           </div>
 
@@ -226,22 +248,24 @@ export default function Blogs() {
                   <ArrowLeft className="h-4 w-4" />
                   Back to posts
                 </button>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleEditBlog(selectedBlog)}
-                    className="flex items-center gap-2 bg-foreground hover:bg-foreground/90 text-background px-3 py-1 rounded-md text-sm transition-colors"
-                  >
-                    <Edit className="h-4 w-4" />
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteBlog(selectedBlog.id)}
-                    className="flex items-center gap-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground px-3 py-1 rounded-md text-sm transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete
-                  </button>
-                </div>
+                {isAdmin && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleEditBlog(selectedBlog)}
+                      className="flex items-center gap-2 bg-foreground hover:bg-foreground/90 text-background px-3 py-1 rounded-md text-sm transition-colors"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteBlog(selectedBlog.id)}
+                      className="flex items-center gap-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground px-3 py-1 rounded-md text-sm transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Content */}
@@ -290,15 +314,17 @@ export default function Blogs() {
                 No blog posts yet
               </h3>
               <p className="text-muted-foreground">
-                Start writing your first blog post to share your thoughts!
+                {isAdmin ? "Start writing your first blog post to share your thoughts!" : "Check back later for new blog posts!"}
               </p>
             </div>
-            <button
-              onClick={handleAddBlog}
-              className="bg-foreground hover:bg-foreground/90 text-background px-6 py-3 rounded-lg font-medium transition-colors"
-            >
-              Create Your First Post
-            </button>
+            {isAdmin && (
+              <button
+                onClick={handleAddBlog}
+                className="bg-foreground hover:bg-foreground/90 text-background px-6 py-3 rounded-lg font-medium transition-colors"
+              >
+                Create Your First Post
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -343,22 +369,24 @@ export default function Blogs() {
                       Read More →
                     </button>
                     
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleEditBlog(blog)}
-                        className="p-2 text-muted-foreground hover:text-foreground transition-colors"
-                        title="Edit"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteBlog(blog.id)}
-                        className="p-2 text-muted-foreground hover:text-destructive transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
+                    {isAdmin && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEditBlog(blog)}
+                          className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+                          title="Edit"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteBlog(blog.id)}
+                          className="p-2 text-muted-foreground hover:text-destructive transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
