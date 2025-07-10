@@ -213,7 +213,7 @@ export default function Blogs() {
             </div>
           </div>
 
-        {/* Blog Detail View */}
+          {/* Blog Detail View */}
         {selectedBlog && (
           <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-4xl h-[90vh] flex flex-col">
@@ -471,6 +471,7 @@ export default function Blogs() {
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
