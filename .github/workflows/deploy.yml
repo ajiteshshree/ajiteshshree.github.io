@@ -10,6 +10,11 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -26,9 +31,20 @@ jobs:
     - name: Build
       run: npm run build:gh-pages
 
+    - name: Copy 404.html for SPA routing
+      run: cp ./dist/spa/index.html ./dist/spa/404.html
+
+    - name: Setup Pages
+      if: github.ref == 'refs/heads/main'
+      uses: actions/configure-pages@v3
+
+    - name: Upload artifact
+      if: github.ref == 'refs/heads/main'
+      uses: actions/upload-pages-artifact@v2
+      with:
+        path: ./dist/spa
+
     - name: Deploy to GitHub Pages
       if: github.ref == 'refs/heads/main'
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./dist/spa
+      id: deployment
+      uses: actions/deploy-pages@v2
