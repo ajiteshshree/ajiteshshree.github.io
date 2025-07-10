@@ -170,13 +170,15 @@ export default function Blogs() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-background">
         <Navigation />
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center min-h-96">
-            <div className="text-center">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-400">Loading blogs...</p>
+        <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-center min-h-96">
+              <div className="text-center">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+                <p className="text-muted-foreground">Loading blogs...</p>
+              </div>
             </div>
           </div>
         </div>
@@ -185,40 +187,41 @@ export default function Blogs() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-background">
       <Navigation />
       
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                Blog Posts
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                Thoughts, insights, and stories from my journey
-              </p>
+      <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-12">
+            <div className="flex items-center justify-between">
+              <div className="text-center lg:text-left">
+                <h1 className="text-4xl sm:text-5xl font-display font-bold text-foreground mb-4">
+                  Blog Posts
+                </h1>
+                <p className="text-xl text-muted-foreground">
+                  Thoughts, insights, and stories from my journey
+                </p>
+              </div>
+              <button
+                onClick={handleAddBlog}
+                className="bg-foreground hover:bg-foreground/90 text-background px-6 py-3 rounded-lg flex items-center gap-2 transition-colors font-medium"
+              >
+                <Plus className="h-4 w-4" />
+                New Post
+              </button>
             </div>
-            <button
-              onClick={handleAddBlog}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              New Post
-            </button>
           </div>
-        </div>
 
         {/* Blog Detail View */}
         {selectedBlog && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl h-[90vh] flex flex-col">
+          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-4xl h-[90vh] flex flex-col">
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between p-6 border-b border-border">
                 <button
                   onClick={handleBackToList}
-                  className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Back to posts
@@ -226,14 +229,14 @@ export default function Blogs() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleEditBlog(selectedBlog)}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm transition-colors"
+                    className="flex items-center gap-2 bg-foreground hover:bg-foreground/90 text-background px-3 py-1 rounded-md text-sm transition-colors"
                   >
                     <Edit className="h-4 w-4" />
                     Edit
                   </button>
                   <button
                     onClick={() => handleDeleteBlog(selectedBlog.id)}
-                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-sm transition-colors"
+                    className="flex items-center gap-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground px-3 py-1 rounded-md text-sm transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
                     Delete
@@ -251,11 +254,11 @@ export default function Blogs() {
                   />
                 )}
                 
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+                <h1 className="text-3xl font-bold text-foreground mb-4">
                   {selectedBlog.title}
                 </h1>
                 
-                <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-6">
+                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
                     {formatDate(selectedBlog.createdAt)}
@@ -266,9 +269,9 @@ export default function Blogs() {
                   </div>
                 </div>
 
-                <div className="prose dark:prose-invert max-w-none">
+                <div className="prose prose-neutral dark:prose-invert max-w-none">
                   {selectedBlog.content.split('\n').map((paragraph, index) => (
-                    <p key={index} className="mb-4 text-gray-700 dark:text-gray-300 leading-relaxed">
+                    <p key={index} className="mb-4 text-foreground leading-relaxed">
                       {paragraph}
                     </p>
                   ))}
@@ -280,29 +283,29 @@ export default function Blogs() {
 
         {/* Blog Grid */}
         {blogs.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-gray-400 dark:text-gray-600 mb-4">
+          <div className="text-center py-16">
+            <div className="text-muted-foreground mb-6">
               <Image className="h-16 w-16 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              <h3 className="text-xl font-semibold text-foreground mb-2">
                 No blog posts yet
               </h3>
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-muted-foreground">
                 Start writing your first blog post to share your thoughts!
               </p>
             </div>
             <button
               onClick={handleAddBlog}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              className="bg-foreground hover:bg-foreground/90 text-background px-6 py-3 rounded-lg font-medium transition-colors"
             >
               Create Your First Post
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {blogs.map((blog) => (
               <div
                 key={blog.id}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                className="bg-card border border-border rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow"
               >
                 {blog.image && (
                   <img
@@ -313,15 +316,15 @@ export default function Blogs() {
                 )}
                 
                 <div className="p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                  <h3 className="text-xl font-semibold text-foreground mb-2">
                     {blog.title}
                   </h3>
                   
-                  <p className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-3">
+                  <p className="text-muted-foreground mb-4 line-clamp-3">
                     {blog.excerpt}
                   </p>
 
-                  <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
                       {formatDate(blog.createdAt)}
@@ -335,7 +338,7 @@ export default function Blogs() {
                   <div className="flex items-center justify-between">
                     <button
                       onClick={() => handleReadMore(blog)}
-                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                      className="text-foreground hover:text-foreground/80 font-medium"
                     >
                       Read More →
                     </button>
@@ -343,14 +346,14 @@ export default function Blogs() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleEditBlog(blog)}
-                        className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+                        className="p-2 text-muted-foreground hover:text-foreground transition-colors"
                         title="Edit"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteBlog(blog.id)}
-                        className="p-2 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors"
+                        className="p-2 text-muted-foreground hover:text-destructive transition-colors"
                         title="Delete"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -365,16 +368,16 @@ export default function Blogs() {
 
         {/* Create/Edit Blog Modal */}
         {isModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              <div className="flex items-center justify-between p-6 border-b border-border">
+                <h2 className="text-xl font-semibold text-foreground">
                   {editingBlog ? "Edit Blog Post" : "Create New Blog Post"}
                 </h2>
                 <button
                   onClick={handleCloseModal}
-                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -384,7 +387,7 @@ export default function Blogs() {
               <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Title *
                     </label>
                     <input
@@ -392,13 +395,13 @@ export default function Blogs() {
                       name="title"
                       value={formData.title}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                      className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Excerpt *
                     </label>
                     <textarea
@@ -406,13 +409,13 @@ export default function Blogs() {
                       value={formData.excerpt}
                       onChange={handleInputChange}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                      className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Content *
                     </label>
                     <textarea
@@ -420,20 +423,20 @@ export default function Blogs() {
                       value={formData.content}
                       onChange={handleInputChange}
                       rows={12}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                      className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Featured Image
                     </label>
                     <input
                       type="file"
                       accept="image/*"
                       onChange={handleImageUpload}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                      className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
                     />
                     {formData.image && (
                       <div className="mt-2">
@@ -447,18 +450,18 @@ export default function Blogs() {
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-border">
                   <button
                     type="button"
                     onClick={handleCloseModal}
-                    className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    className="px-4 py-2 text-muted-foreground border border-border rounded-md hover:bg-accent transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+                    className="px-4 py-2 bg-foreground text-background rounded-md hover:bg-foreground/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
                   >
                     {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                     {editingBlog ? "Update Post" : "Create Post"}
