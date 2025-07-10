@@ -1,63 +1,20 @@
 import { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
-import { Plus, Calendar, Clock, X, Image, Trash2, ArrowLeft, Edit, Share, Copy } from "lucide-react";
+import { Plus, Calendar, Clock, X, Image, Trash2, ArrowLeft, Edit, Loader2 } from "lucide-react";
+import { 
+  BlogPost, 
+  addBlogPost, 
+  updateBlogPost, 
+  deleteBlogPost, 
+  subscribeToBlogPosts 
+} from "@/lib/blogService";
 
-interface BlogPost {
-  id: number;
-  title: string;
-  excerpt: string;
-  date: string;
-  readTime: string;
-  content?: string;
-  image?: string;
-}
-
-const mockBlogs: BlogPost[] = [];
-
-// For now, let's focus on robust localStorage with better initialization
-// We'll add a few sample posts that appear on all devices as fallback
-
-const defaultBlogs: BlogPost[] = [
-  {
-    id: 1000001,
-    title: "Welcome to My Blog",
-    excerpt: "Thanks for visiting! This blog is where I share my thoughts on technology, development, and life.",
-    date: "2025-01-10", 
-    readTime: "2 min read",
-    content: "Welcome to my blog! I'm excited to share my journey with you.\n\nYou'll find posts about web development, AI tools, and random thoughts here. Feel free to explore and let me know what you think!",
-    image: "/placeholder.svg"
-  }
-];
-
-// Simple storage functions with better error handling
-const loadBlogsFromStorage = (): BlogPost[] => {
-  try {
-    const savedBlogs = localStorage.getItem('ajitesh-blogs');
-    if (savedBlogs) {
-      const parsed = JSON.parse(savedBlogs);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        console.log('Loaded blogs from localStorage:', parsed.length);
-        return parsed;
-      }
-    }
-    
-    // If no saved blogs, initialize with default blogs
-    console.log('No saved blogs found, using default blogs');
-    saveBlogsToStorage(defaultBlogs);
-    return defaultBlogs;
-  } catch (error) {
-    console.error('Error loading blogs:', error);
-    return defaultBlogs;
-  }
-};
-
-const saveBlogsToStorage = (blogs: BlogPost[]): void => {
-  try {
-    localStorage.setItem('ajitesh-blogs', JSON.stringify(blogs));
-    console.log('Blogs saved to localStorage:', blogs.length, 'blogs');
-  } catch (error) {
-    console.error('Error saving blogs:', error);
-  }
+// Helper function to calculate read time
+const calculateReadTime = (content: string): string => {
+  const wordsPerMinute = 200;
+  const words = content.trim().split(/\s+/).length;
+  const minutes = Math.ceil(words / wordsPerMinute);
+  return `${minutes} min read`;
 };
 
 export default function Blogs() {
@@ -65,37 +22,43 @@ export default function Blogs() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedBlog, setSelectedBlog] = useState<BlogPost | null>(null);
   const [editingBlog, setEditingBlog] = useState<BlogPost | null>(null);
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [shareData, setShareData] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     excerpt: "",
     content: "",
-    readTime: "",
-    image: "",
+    image: ""
   });
 
-  // Load blogs from localStorage on component mount
+  // Subscribe to real-time updates from Firestore
   useEffect(() => {
-    const loadedBlogs = loadBlogsFromStorage();
-    setBlogs(loadedBlogs);
-    
-    // Check for import data in URL
-    handleImportFromUrl();
+    const unsubscribe = subscribeToBlogPosts((posts) => {
+      setBlogs(posts);
+      setLoading(false);
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
 
-  // Save blogs to localStorage whenever blogs state changes
-  useEffect(() => {
-    // Only save if blogs have been loaded (not empty initial state)
-    if (blogs.length > 0) {
-      saveBlogsToStorage(blogs);
-    }
-  }, [blogs]);
-
-  // Simple admin check - in a real app, this would be handled by authentication
-  const isAdmin = true; // For demo purposes, always show admin features
+  // Format date helper
+  const formatDate = (date: Date): string => {
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }).format(date);
+  };
 
   const handleAddBlog = () => {
+    setFormData({
+      title: "",
+      excerpt: "",
+      content: "",
+      image: ""
+    });
+    setEditingBlog(null);
     setIsModalOpen(true);
   };
 
@@ -106,8 +69,7 @@ export default function Blogs() {
       title: "",
       excerpt: "",
       content: "",
-      readTime: "",
-      image: "",
+      image: ""
     });
   };
 
@@ -116,55 +78,56 @@ export default function Blogs() {
     setFormData({
       title: blog.title,
       excerpt: blog.excerpt,
-      content: blog.content || "",
-      readTime: blog.readTime,
-      image: blog.image || "",
+      content: blog.content,
+      image: blog.image || ""
     });
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setFormData({ ...formData, image: e.target?.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || !formData.excerpt || !formData.readTime) {
+    if (!formData.title || !formData.excerpt || !formData.content) {
       alert("Please fill in all required fields");
       return;
     }
 
-    if (editingBlog) {
-      // Update existing blog
-      const updatedBlog: BlogPost = {
-        ...editingBlog,
-        title: formData.title,
-        excerpt: formData.excerpt,
-        content: formData.content,
-        readTime: formData.readTime,
-        image: formData.image || undefined,
-      };
-
-      setBlogs(blogs.map(blog => 
-        blog.id === editingBlog.id ? updatedBlog : blog
-      ));
-      
-      // Update selectedBlog if we're currently viewing the edited blog
-      if (selectedBlog && selectedBlog.id === editingBlog.id) {
-        setSelectedBlog(updatedBlog);
+    setSubmitting(true);
+    try {
+      if (editingBlog) {
+        // Update existing blog
+        await updateBlogPost(editingBlog.id, {
+          title: formData.title,
+          excerpt: formData.excerpt,
+          content: formData.content,
+          image: formData.image || undefined
+        });
+      } else {
+        // Create new blog
+        await addBlogPost({
+          title: formData.title,
+          excerpt: formData.excerpt,
+          content: formData.content,
+          image: formData.image || undefined
+        });
       }
-    } else {
-      // Add new blog
-      const newBlog: BlogPost = {
-        id: Date.now(), // Simple ID generation
-        title: formData.title,
-        excerpt: formData.excerpt,
-        content: formData.content,
-        date: new Date().toISOString().split("T")[0],
-        readTime: formData.readTime,
-        image: formData.image || undefined,
-      };
-
-      setBlogs([newBlog, ...blogs]);
+      handleCloseModal();
+    } catch (error) {
+      console.error('Error saving blog:', error);
+      alert('Failed to save blog post. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
-
-    handleCloseModal();
   };
 
   const handleInputChange = (
@@ -174,13 +137,16 @@ export default function Blogs() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleDeleteBlog = (blogId: number) => {
-    const blogToDelete = blogs.find(blog => blog.id === blogId);
-    if (blogToDelete && window.confirm(`Are you sure you want to delete "${blogToDelete.title}"?`)) {
-      setBlogs(blogs.filter(blog => blog.id !== blogId));
-      // If we're viewing the deleted blog, go back to list
-      if (selectedBlog && selectedBlog.id === blogId) {
-        setSelectedBlog(null);
+  const handleDeleteBlog = async (blogId: string) => {
+    if (confirm("Are you sure you want to delete this blog post?")) {
+      try {
+        await deleteBlogPost(blogId);
+        if (selectedBlog && selectedBlog.id === blogId) {
+          setSelectedBlog(null);
+        }
+      } catch (error) {
+        console.error('Error deleting blog:', error);
+        alert('Failed to delete blog post. Please try again.');
       }
     }
   };
@@ -193,436 +159,307 @@ export default function Blogs() {
     setSelectedBlog(null);
   };
 
-  const handleShareBlog = (blog: BlogPost) => {
-    const blogData = JSON.stringify(blog);
-    const encodedData = btoa(blogData); // Base64 encode
-    const shareUrl = `${window.location.origin}${window.location.pathname}?import=${encodedData}`;
-    setShareData(shareUrl);
-    setShowShareModal(true);
-  };
-
-  const handleImportFromUrl = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const importData = urlParams.get('import');
-    
-    if (importData) {
-      try {
-        const decodedData = atob(importData);
-        const importedBlog: BlogPost = JSON.parse(decodedData);
-        
-        // Check if blog already exists
-        const exists = blogs.some(blog => blog.id === importedBlog.id);
-        if (!exists) {
-          setBlogs([importedBlog, ...blogs]);
-          alert(`Imported blog: "${importedBlog.title}"`);
-        } else {
-          alert(`Blog "${importedBlog.title}" already exists`);
-        }
-        
-        // Clean up URL
-        window.history.replaceState({}, '', window.location.pathname);
-      } catch (error) {
-        console.error('Error importing blog:', error);
-        alert('Error importing blog data');
-      }
-    }
-  };
-
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      alert('Share link copied to clipboard!');
-    } catch (error) {
-      console.error('Failed to copy:', error);
-      alert('Please copy the link manually');
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <Navigation />
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center min-h-96">
+            <div className="text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400">Loading blogs...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Navigation />
-
-      {/* Individual Blog Post View */}
-      {selectedBlog ? (
-        <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto">
-            {/* Back Button */}
-            <button
-              onClick={handleBackToList}
-              className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors mb-8"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Blog List
-            </button>
-
-            {/* Blog Header */}
-            <div className="mb-8">
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold text-foreground mb-6">
-                {selectedBlog.title}
+      
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                Blog Posts
               </h1>
-              
-              <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-6">
-                <div className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-1" />
-                  {formatDate(selectedBlog.date)}
-                </div>
-                <div className="flex items-center">
-                  <Clock className="h-4 w-4 mr-1" />
-                  {selectedBlog.readTime}
-                </div>
-              </div>
+              <p className="text-gray-600 dark:text-gray-400">
+                Thoughts, insights, and stories from my journey
+              </p>
+            </div>
+            <button
+              onClick={handleAddBlog}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              New Post
+            </button>
+          </div>
+        </div>
 
-              {/* Admin Controls for Individual Blog */}
-              {isAdmin && (
-                <div className="flex justify-end mb-6 space-x-2">
-                  <button
-                    onClick={() => handleShareBlog(selectedBlog)}
-                    className="text-green-500 hover:text-green-700 transition-colors p-2 rounded-lg hover:bg-green-50 dark:hover:bg-green-950"
-                    title="Share blog post"
-                  >
-                    <Share className="h-4 w-4" />
-                  </button>
+        {/* Blog Detail View */}
+        {selectedBlog && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl h-[90vh] flex flex-col">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={handleBackToList}
+                  className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to posts
+                </button>
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleEditBlog(selectedBlog)}
-                    className="text-blue-500 hover:text-blue-700 transition-colors p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950"
-                    title="Edit blog post"
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm transition-colors"
                   >
                     <Edit className="h-4 w-4" />
+                    Edit
                   </button>
                   <button
                     onClick={() => handleDeleteBlog(selectedBlog.id)}
-                    className="text-red-500 hover:text-red-700 transition-colors p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950"
-                    title="Delete blog post"
+                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-sm transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
+                    Delete
                   </button>
                 </div>
-              )}
-            </div>
-
-            {/* Blog Image */}
-            {selectedBlog.image && (
-              <div className="mb-8 rounded-lg overflow-hidden">
-                <img
-                  src={selectedBlog.image}
-                  alt={selectedBlog.title}
-                  className="w-full h-64 sm:h-80 object-cover"
-                />
               </div>
-            )}
 
-            {/* Blog Content */}
-            <div className="prose prose-lg max-w-none text-foreground">
-              <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
-                {selectedBlog.excerpt}
-              </p>
-              
-              {selectedBlog.content ? (
-                <div className="text-foreground leading-relaxed whitespace-pre-wrap">
-                  {selectedBlog.content}
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-6">
+                {selectedBlog.image && (
+                  <img
+                    src={selectedBlog.image}
+                    alt={selectedBlog.title}
+                    className="w-full h-64 object-cover rounded-lg mb-6"
+                  />
+                )}
+                
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+                  {selectedBlog.title}
+                </h1>
+                
+                <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-6">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    {formatDate(selectedBlog.createdAt)}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
+                    {calculateReadTime(selectedBlog.content)}
+                  </div>
                 </div>
-              ) : (
-                <p className="text-muted-foreground italic">
-                  No additional content available for this blog post.
-                </p>
-              )}
+
+                <div className="prose dark:prose-invert max-w-none">
+                  {selectedBlog.content.split('\n').map((paragraph, index) => (
+                    <p key={index} className="mb-4 text-gray-700 dark:text-gray-300 leading-relaxed">
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      ) : (
-        // Blog List View
-        <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto">
-            {/* Header */}
-            <div className="text-center mb-12">
-              <h1 className="text-4xl sm:text-5xl font-display font-bold text-foreground mb-4">
-                Blog
-              </h1>
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Thoughts, tutorials, and insights about web development,
-                technology, and life.
+        )}
+
+        {/* Blog Grid */}
+        {blogs.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-gray-400 dark:text-gray-600 mb-4">
+              <Image className="h-16 w-16 mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                No blog posts yet
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Start writing your first blog post to share your thoughts!
               </p>
             </div>
-
-            {/* Admin Add Blog Button */}
-            {isAdmin && (
-              <div className="mb-8 flex justify-end">
-                <button
-                  onClick={handleAddBlog}
-                  className="inline-flex items-center px-4 py-2 bg-foreground text-background rounded-lg font-medium transition-colors hover:bg-foreground/90"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add New Blog
-                </button>
-              </div>
-            )}
-
-            {/* Blog Posts */}
-            <div className="space-y-8">
-              {blogs.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground text-lg">
-                    No blog posts yet. Check back soon!
+            <button
+              onClick={handleAddBlog}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+            >
+              Create Your First Post
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {blogs.map((blog) => (
+              <div
+                key={blog.id}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+              >
+                {blog.image && (
+                  <img
+                    src={blog.image}
+                    alt={blog.title}
+                    className="w-full h-48 object-cover"
+                  />
+                )}
+                
+                <div className="p-6">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                    {blog.title}
+                  </h3>
+                  
+                  <p className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-3">
+                    {blog.excerpt}
                   </p>
-                </div>
-              ) : (
-                blogs.map((blog) => (
-                  <article
-                    key={blog.id}
-                    className="bg-card border border-border rounded-xl p-6 hover:shadow-lg transition-shadow"
-                  >
-                    {/* Admin Controls */}
-                    {isAdmin && (
-                      <div className="flex justify-end mb-4 space-x-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleShareBlog(blog);
-                          }}
-                          className="text-green-500 hover:text-green-700 transition-colors p-2 rounded-lg hover:bg-green-50 dark:hover:bg-green-950"
-                          title="Share blog post"
-                        >
-                          <Share className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditBlog(blog);
-                          }}
-                          className="text-blue-500 hover:text-blue-700 transition-colors p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950"
-                          title="Edit blog post"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteBlog(blog.id);
-                          }}
-                          className="text-red-500 hover:text-red-700 transition-colors p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950"
-                          title="Delete blog post"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    )}
 
-                    {/* Blog Image */}
-                    {blog.image && (
-                      <div className="mb-4 rounded-lg overflow-hidden">
-                        <img
-                          src={blog.image}
-                          alt={blog.title}
-                          className="w-full h-48 object-cover"
-                        />
-                      </div>
-                    )}
+                  <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      {formatDate(blog.createdAt)}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-4 w-4" />
+                      {calculateReadTime(blog.content)}
+                    </div>
+                  </div>
 
-                    <div className="cursor-pointer">
-                      <h2 className="text-2xl font-bold text-foreground mb-3 hover:text-muted-foreground transition-colors">
-                        {blog.title}
-                      </h2>
-
-                      <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-4">
-                        <div className="flex items-center">
-                          <Calendar className="h-4 w-4 mr-1" />
-                          {formatDate(blog.date)}
-                        </div>
-                        <div className="flex items-center">
-                          <Clock className="h-4 w-4 mr-1" />
-                          {blog.readTime}
-                        </div>
-                      </div>
-
-                      <p className="text-muted-foreground leading-relaxed mb-4">
-                        {blog.excerpt}
-                      </p>
-
-                      <button 
-                        onClick={() => handleReadMore(blog)}
-                        className="text-foreground font-medium hover:text-muted-foreground transition-colors"
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => handleReadMore(blog)}
+                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                    >
+                      Read More →
+                    </button>
+                    
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleEditBlog(blog)}
+                        className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+                        title="Edit"
                       >
-                        Read more →
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteBlog(blog.id)}
+                        className="p-2 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
-                  </article>
-                ))
-              )}
-            </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Add Blog Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-background border border-border rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-foreground">
-                  {editingBlog ? "Edit Blog Post" : "Add New Blog Post"}
+        {/* Create/Edit Blog Modal */}
+        {isModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  {editingBlog ? "Edit Blog Post" : "Create New Blog Post"}
                 </h2>
                 <button
                   onClick={handleCloseModal}
-                  className="text-muted-foreground hover:text-foreground"
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 >
-                  <X className="h-6 w-6" />
+                  <X className="h-5 w-5" />
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Title *
-                  </label>
-                  <input
-                    type="text"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
-                    placeholder="Enter blog title"
-                    required
-                  />
+              {/* Form */}
+              <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Title *
+                    </label>
+                    <input
+                      type="text"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Excerpt *
+                    </label>
+                    <textarea
+                      name="excerpt"
+                      value={formData.excerpt}
+                      onChange={handleInputChange}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Content *
+                    </label>
+                    <textarea
+                      name="content"
+                      value={formData.content}
+                      onChange={handleInputChange}
+                      rows={12}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Featured Image
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    />
+                    {formData.image && (
+                      <div className="mt-2">
+                        <img
+                          src={formData.image}
+                          alt="Preview"
+                          className="w-full h-32 object-cover rounded-md"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Excerpt *
-                  </label>
-                  <textarea
-                    name="excerpt"
-                    value={formData.excerpt}
-                    onChange={handleInputChange}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
-                    placeholder="Brief description of your blog post"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Content
-                  </label>
-                  <textarea
-                    name="content"
-                    value={formData.content}
-                    onChange={handleInputChange}
-                    rows={8}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
-                    placeholder="Write your blog content here..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    <Image className="inline h-4 w-4 mr-1" />
-                    Blog Image
-                  </label>
-                  <input
-                    type="text"
-                    name="image"
-                    value={formData.image}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
-                    placeholder="Enter image URL or path (e.g., /blog-image.jpg)"
-                  />
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Add an image URL or upload your image to the public folder and reference it (e.g., /my-blog-image.jpg)
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Read Time *
-                  </label>
-                  <input
-                    type="text"
-                    name="readTime"
-                    value={formData.readTime}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
-                    placeholder="e.g., 5 min read"
-                    required
-                  />
-                </div>
-
-                <div className="flex justify-end space-x-3 pt-4">
+                <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                   <button
                     type="button"
                     onClick={handleCloseModal}
-                    className="px-4 py-2 border border-border text-foreground rounded-lg hover:bg-accent transition-colors"
+                    className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-foreground text-background rounded-lg hover:bg-foreground/90 transition-colors"
+                    disabled={submitting}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
                   >
-                    {editingBlog ? "Update Blog Post" : "Add Blog Post"}
+                    {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {editingBlog ? "Update Post" : "Create Post"}
                   </button>
                 </div>
               </form>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Share Modal */}
-      {showShareModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-background border border-border rounded-xl max-w-lg w-full">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-foreground">
-                  Share Blog Post
-                </h2>
-                <button
-                  onClick={() => setShowShareModal(false)}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <p className="text-muted-foreground">
-                  Copy this link and open it on another device to import this blog post:
-                </p>
-                
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={shareData}
-                    readOnly
-                    className="flex-1 px-3 py-2 border border-border rounded-lg bg-muted text-foreground text-sm"
-                  />
-                  <button
-                    onClick={() => copyToClipboard(shareData)}
-                    className="px-3 py-2 bg-foreground text-background rounded-lg hover:bg-foreground/90 transition-colors"
-                    title="Copy to clipboard"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </button>
-                </div>
-                
-                <p className="text-sm text-muted-foreground">
-                  💡 Tip: Open this link on your other device's browser to automatically import this blog post!
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
