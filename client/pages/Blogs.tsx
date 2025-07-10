@@ -2,10 +2,6 @@ import { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
 import { Plus, Calendar, Clock, X, Image, Trash2, ArrowLeft, Edit } from "lucide-react";
 
-// Simple cloud storage using JSONBin.io (free service)
-const JSONBIN_BIN_ID = "676117d0e41b4d34e464c4b1"; // Public bin for demo
-const JSONBIN_API_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
-
 interface BlogPost {
   id: number;
   title: string;
@@ -18,48 +14,49 @@ interface BlogPost {
 
 const mockBlogs: BlogPost[] = [];
 
-// Cloud storage functions using JSONBin.io
-const loadBlogsFromCloud = async (): Promise<BlogPost[]> => {
+// For now, let's focus on robust localStorage with better initialization
+// We'll add a few sample posts that appear on all devices as fallback
+
+const defaultBlogs: BlogPost[] = [
+  {
+    id: 1000001,
+    title: "Welcome to My Blog",
+    excerpt: "Thanks for visiting! This blog is where I share my thoughts on technology, development, and life.",
+    date: "2025-01-10", 
+    readTime: "2 min read",
+    content: "Welcome to my blog! I'm excited to share my journey with you.\n\nYou'll find posts about web development, AI tools, and random thoughts here. Feel free to explore and let me know what you think!",
+    image: "/placeholder.svg"
+  }
+];
+
+// Simple storage functions with better error handling
+const loadBlogsFromStorage = (): BlogPost[] => {
   try {
-    const response = await fetch(JSONBIN_API_URL + '/latest', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
+    const savedBlogs = localStorage.getItem('ajitesh-blogs');
+    if (savedBlogs) {
+      const parsed = JSON.parse(savedBlogs);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        console.log('Loaded blogs from localStorage:', parsed.length);
+        return parsed;
       }
-    });
-    
-    if (!response.ok) {
-      console.log('No cloud data found, using localStorage');
-      return [];
     }
     
-    const data = await response.json();
-    const blogs = data.record || [];
-    
-    console.log('Loaded from cloud:', blogs);
-    return Array.isArray(blogs) ? blogs : [];
+    // If no saved blogs, initialize with default blogs
+    console.log('No saved blogs found, using default blogs');
+    saveBlogsToStorage(defaultBlogs);
+    return defaultBlogs;
   } catch (error) {
-    console.error('Error loading from cloud:', error);
-    return [];
+    console.error('Error loading blogs:', error);
+    return defaultBlogs;
   }
 };
 
-const saveBlogsToCloud = async (blogs: BlogPost[]): Promise<boolean> => {
+const saveBlogsToStorage = (blogs: BlogPost[]): void => {
   try {
-    const response = await fetch(JSONBIN_API_URL, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(blogs)
-    });
-    
-    const success = response.ok;
-    console.log('Cloud save result:', success ? 'success' : 'failed');
-    return success;
+    localStorage.setItem('ajitesh-blogs', JSON.stringify(blogs));
+    console.log('Blogs saved to localStorage:', blogs.length, 'blogs');
   } catch (error) {
-    console.error('Error saving to cloud:', error);
-    return false;
+    console.error('Error saving blogs:', error);
   }
 };
 
@@ -76,62 +73,17 @@ export default function Blogs() {
     image: "",
   });
 
-  // Load blogs from cloud storage, then localStorage on component mount
+  // Load blogs from localStorage on component mount
   useEffect(() => {
-    const loadBlogs = async () => {
-      // Try cloud storage first
-      const cloudBlogs = await loadBlogsFromCloud();
-      
-      if (cloudBlogs.length > 0) {
-        console.log('Loaded blogs from cloud:', cloudBlogs.length);
-        setBlogs(cloudBlogs);
-        // Also save to localStorage as backup
-        localStorage.setItem('blogs', JSON.stringify(cloudBlogs));
-        return;
-      }
-      
-      // Fall back to localStorage
-      const savedBlogs = localStorage.getItem('blogs');
-      if (savedBlogs) {
-        try {
-          const parsedBlogs = JSON.parse(savedBlogs);
-          if (parsedBlogs && parsedBlogs.length > 0) {
-            console.log('Loaded blogs from localStorage:', parsedBlogs.length);
-            setBlogs(parsedBlogs);
-            return;
-          }
-        } catch (error) {
-          console.error('Error loading blogs from localStorage:', error);
-        }
-      }
-      
-      // If no blogs anywhere, start with empty array
-      console.log('No blogs found, starting fresh');
-      setBlogs([]);
-    };
-    
-    loadBlogs();
+    const loadedBlogs = loadBlogsFromStorage();
+    setBlogs(loadedBlogs);
   }, []);
 
-  // Save blogs to both localStorage and cloud whenever blogs state changes
+  // Save blogs to localStorage whenever blogs state changes
   useEffect(() => {
-    const saveBlogs = async () => {
-      if (blogs.length >= 0) { // Save even if empty array
-        // Save to localStorage immediately
-        localStorage.setItem('blogs', JSON.stringify(blogs));
-        console.log('Blogs saved to localStorage:', blogs.length, 'blogs');
-        
-        // Try to save to cloud (non-blocking)
-        const cloudSaved = await saveBlogsToCloud(blogs);
-        if (cloudSaved) {
-          console.log('Blogs synced to cloud successfully');
-        }
-      }
-    };
-    
-    // Only save if blogs array has been initialized (not on first render)
-    if (blogs.length > 0 || (blogs.length === 0 && localStorage.getItem('blogs'))) {
-      saveBlogs();
+    // Only save if blogs have been loaded (not empty initial state)
+    if (blogs.length > 0) {
+      saveBlogsToStorage(blogs);
     }
   }, [blogs]);
 
