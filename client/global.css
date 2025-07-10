@@ -1,0 +1,162 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /**
+   * Black and white theme with dark mode support
+   * All colors are expressed as HSL values for consistency
+   */
+  :root {
+    /* Light mode - black and white theme */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+
+    --primary: 0 0% 0%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 0%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 40%;
+
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 0%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 0 0% 0%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 0 0% 20%;
+    --sidebar-primary: 0 0% 0%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 96%;
+    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-border: 0 0% 90%;
+    --sidebar-ring: 0 0% 0%;
+
+    /* Keep brand colors neutral for black/white theme */
+    --brand-50: 0 0% 98%;
+    --brand-100: 0 0% 96%;
+    --brand-200: 0 0% 90%;
+    --brand-300: 0 0% 80%;
+    --brand-400: 0 0% 60%;
+    --brand-500: 0 0% 40%;
+    --brand-600: 0 0% 20%;
+    --brand-700: 0 0% 15%;
+    --brand-800: 0 0% 10%;
+    --brand-900: 0 0% 5%;
+    --brand-950: 0 0% 0%;
+  }
+
+  .dark {
+    /* Dark mode - inverted black and white theme */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
+
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 60%;
+
+    --accent: 0 0% 10%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 0 0% 100%;
+
+    --sidebar-background: 0 0% 5%;
+    --sidebar-foreground: 0 0% 80%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 0 0% 10%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 15%;
+    --sidebar-ring: 0 0% 100%;
+
+    /* Brand colors for dark mode - inverted */
+    --brand-50: 0 0% 0%;
+    --brand-100: 0 0% 5%;
+    --brand-200: 0 0% 10%;
+    --brand-300: 0 0% 15%;
+    --brand-400: 0 0% 20%;
+    --brand-500: 0 0% 40%;
+    --brand-600: 0 0% 60%;
+    --brand-700: 0 0% 80%;
+    --brand-800: 0 0% 90%;
+    --brand-900: 0 0% 96%;
+    --brand-950: 0 0% 100%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-display;
+  }
+}
+
+@layer utilities {
+  .gradient-brand {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--foreground)),
+      hsl(var(--muted-foreground))
+    );
+  }
+
+  .gradient-text {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--foreground)),
+      hsl(var(--muted-foreground))
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
