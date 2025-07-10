@@ -13,6 +13,91 @@ interface BlogPost {
 }
 
 const mockBlogs: BlogPost[] = [
+  {
+    id: 1,
+    title: "Welcome to My Blog!",
+    excerpt: "A quick introduction to what you can expect from this space - thoughts on tech, AI, and the occasional rocket daydream.",
+    date: "2025-01-10",
+    readTime: "3 min read",
+    content: `Welcome to my little corner of the internet! 🚀
+
+I'm excited to share my thoughts, experiments, and discoveries with you here. You'll find posts about:
+
+• Web development tips and tricks
+• AI tools and experiments I'm working with
+• Physics and mathematics rabbit holes I fall into
+• Book recommendations (from my ever-growing collection)
+• Random thoughts on technology and life
+
+This blog is built with React, TypeScript, and a lot of curiosity. Feel free to explore, and don't hesitate to reach out if something resonates with you!
+
+Thanks for stopping by, and I hope you enjoy the journey ahead.`,
+    image: "/placeholder.svg"
+  },
+  {
+    id: 2,
+    title: "Building This Blog: A React & TypeScript Journey", 
+    excerpt: "How I built this personal blog website using React, TypeScript, and modern web technologies - plus some lessons learned along the way.",
+    date: "2025-01-08",
+    readTime: "7 min read",
+    content: `Creating this blog has been an interesting journey of combining modern web technologies with good old-fashioned storytelling.
+
+## The Tech Stack
+
+I chose React and TypeScript for the frontend because they provide excellent developer experience and type safety. The styling is handled by Tailwind CSS with a custom design system that supports both light and dark modes.
+
+## Key Features
+
+• **Responsive Design**: Works beautifully on all devices
+• **Dark/Light Mode**: Automatic theme switching
+• **Admin Controls**: Full CRUD operations for blog posts
+• **Image Support**: Easy image integration for posts
+• **Local Storage**: Persistent data across sessions
+
+## Lessons Learned
+
+Building this reminded me why I love web development - the perfect blend of creativity and logic. Every component tells a story, and every interaction feels intentional.
+
+The deployment to GitHub Pages was particularly satisfying. There's something magical about pushing code and seeing it live on the internet within minutes.
+
+## What's Next?
+
+I'm planning to add features like:
+- Search functionality
+- Tag-based filtering
+- Comment system
+- RSS feed
+
+The journey continues! 🎯`,
+    image: "/placeholder.svg"
+  },
+  {
+    id: 3,
+    title: "AI Tools That Actually Make a Difference",
+    excerpt: "My honest take on AI tools that have genuinely improved my workflow, and some that are just hype.",
+    date: "2025-01-05", 
+    readTime: "5 min read",
+    content: `After trying dozens of AI tools, here are the ones that actually stuck in my daily workflow.
+
+## The Game Changers
+
+**GitHub Copilot**: Still the best coding assistant. It's like having a pair programmer who never gets tired and knows every language.
+
+**ChatGPT/Claude**: For brainstorming, explaining complex concepts, and rubber duck debugging. The quality of conversation is remarkable.
+
+**Midjourney**: When I need visuals for projects, it's incredibly fast and creative.
+
+## The Overhyped
+
+Some tools promise the world but deliver confusion. The key is finding AI that enhances your existing workflow rather than forcing you to completely change how you work.
+
+## My Philosophy
+
+AI should amplify human creativity, not replace it. The best AI tools make me more productive at things I already want to do, rather than convincing me to do entirely new things.
+
+What AI tools have actually improved your workflow? I'm always curious to hear what's working for others.`,
+    image: "/placeholder.svg"
+  }
 ];
 
 export default function Blogs() {
@@ -34,7 +119,12 @@ export default function Blogs() {
     if (savedBlogs) {
       try {
         const parsedBlogs = JSON.parse(savedBlogs);
-        setBlogs(parsedBlogs);
+        // If there are saved blogs, use them; otherwise fall back to mock blogs
+        if (parsedBlogs && parsedBlogs.length > 0) {
+          setBlogs(parsedBlogs);
+        } else {
+          setBlogs(mockBlogs);
+        }
       } catch (error) {
         console.error('Error loading blogs from localStorage:', error);
         // If there's an error, fall back to mock blogs
@@ -43,12 +133,14 @@ export default function Blogs() {
     } else {
       // If no saved blogs, use mock blogs as initial data
       setBlogs(mockBlogs);
+      // Also save the mock blogs to localStorage for future visits
+      localStorage.setItem('blogs', JSON.stringify(mockBlogs));
     }
   }, []);
 
   // Save blogs to localStorage whenever blogs state changes
   useEffect(() => {
-    if (blogs.length > 0) {
+    if (blogs.length >= 0) { // Save even if empty array
       localStorage.setItem('blogs', JSON.stringify(blogs));
       console.log('Blogs saved to localStorage:', blogs.length, 'blogs');
     }
