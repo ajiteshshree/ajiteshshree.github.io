@@ -33,13 +33,18 @@ export default function Blogs() {
 
   // Subscribe to real-time updates from Firestore
   useEffect(() => {
+    console.log('Setting up Firestore subscription...');
     const unsubscribe = subscribeToBlogPosts((posts) => {
+      console.log('Received posts from Firestore:', posts.length);
       setBlogs(posts);
       setLoading(false);
     });
 
     // Cleanup subscription on unmount
-    return () => unsubscribe();
+    return () => {
+      console.log('Cleaning up Firestore subscription');
+      unsubscribe();
+    };
   }, []);
 
   // Format date helper
@@ -104,6 +109,7 @@ export default function Blogs() {
 
     setSubmitting(true);
     try {
+      console.log('Submitting blog post...', formData);
       if (editingBlog) {
         // Update existing blog
         await updateBlogPost(editingBlog.id, {
@@ -112,19 +118,22 @@ export default function Blogs() {
           content: formData.content,
           image: formData.image || undefined
         });
+        console.log('Blog post updated successfully');
       } else {
         // Create new blog
-        await addBlogPost({
+        const newId = await addBlogPost({
           title: formData.title,
           excerpt: formData.excerpt,
           content: formData.content,
           image: formData.image || undefined
         });
+        console.log('Blog post created successfully with ID:', newId);
       }
       handleCloseModal();
     } catch (error) {
       console.error('Error saving blog:', error);
-      alert('Failed to save blog post. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Failed to save blog post: ${errorMessage}`);
     } finally {
       setSubmitting(false);
     }
