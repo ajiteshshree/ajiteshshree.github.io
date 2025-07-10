@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
-import { Plus, Calendar, Clock, X, Image, Trash2, ArrowLeft, Edit } from "lucide-react";
+import { Plus, Calendar, Clock, X, Image, Trash2, ArrowLeft, Edit, Share, Copy } from "lucide-react";
 
 interface BlogPost {
   id: number;
@@ -65,6 +65,8 @@ export default function Blogs() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedBlog, setSelectedBlog] = useState<BlogPost | null>(null);
   const [editingBlog, setEditingBlog] = useState<BlogPost | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareData, setShareData] = useState<string>('');
   const [formData, setFormData] = useState({
     title: "",
     excerpt: "",
@@ -77,6 +79,9 @@ export default function Blogs() {
   useEffect(() => {
     const loadedBlogs = loadBlogsFromStorage();
     setBlogs(loadedBlogs);
+    
+    // Check for import data in URL
+    handleImportFromUrl();
   }, []);
 
   // Save blogs to localStorage whenever blogs state changes
@@ -188,6 +193,51 @@ export default function Blogs() {
     setSelectedBlog(null);
   };
 
+  const handleShareBlog = (blog: BlogPost) => {
+    const blogData = JSON.stringify(blog);
+    const encodedData = btoa(blogData); // Base64 encode
+    const shareUrl = `${window.location.origin}${window.location.pathname}?import=${encodedData}`;
+    setShareData(shareUrl);
+    setShowShareModal(true);
+  };
+
+  const handleImportFromUrl = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const importData = urlParams.get('import');
+    
+    if (importData) {
+      try {
+        const decodedData = atob(importData);
+        const importedBlog: BlogPost = JSON.parse(decodedData);
+        
+        // Check if blog already exists
+        const exists = blogs.some(blog => blog.id === importedBlog.id);
+        if (!exists) {
+          setBlogs([importedBlog, ...blogs]);
+          alert(`Imported blog: "${importedBlog.title}"`);
+        } else {
+          alert(`Blog "${importedBlog.title}" already exists`);
+        }
+        
+        // Clean up URL
+        window.history.replaceState({}, '', window.location.pathname);
+      } catch (error) {
+        console.error('Error importing blog:', error);
+        alert('Error importing blog data');
+      }
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      alert('Share link copied to clipboard!');
+    } catch (error) {
+      console.error('Failed to copy:', error);
+      alert('Please copy the link manually');
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -233,6 +283,13 @@ export default function Blogs() {
               {/* Admin Controls for Individual Blog */}
               {isAdmin && (
                 <div className="flex justify-end mb-6 space-x-2">
+                  <button
+                    onClick={() => handleShareBlog(selectedBlog)}
+                    className="text-green-500 hover:text-green-700 transition-colors p-2 rounded-lg hover:bg-green-50 dark:hover:bg-green-950"
+                    title="Share blog post"
+                  >
+                    <Share className="h-4 w-4" />
+                  </button>
                   <button
                     onClick={() => handleEditBlog(selectedBlog)}
                     className="text-blue-500 hover:text-blue-700 transition-colors p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950"
@@ -325,6 +382,16 @@ export default function Blogs() {
                     {/* Admin Controls */}
                     {isAdmin && (
                       <div className="flex justify-end mb-4 space-x-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleShareBlog(blog);
+                          }}
+                          className="text-green-500 hover:text-green-700 transition-colors p-2 rounded-lg hover:bg-green-50 dark:hover:bg-green-950"
+                          title="Share blog post"
+                        >
+                          <Share className="h-4 w-4" />
+                        </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -505,6 +572,53 @@ export default function Blogs() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-background border border-border rounded-xl max-w-lg w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-foreground">
+                  Share Blog Post
+                </h2>
+                <button
+                  onClick={() => setShowShareModal(false)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-muted-foreground">
+                  Copy this link and open it on another device to import this blog post:
+                </p>
+                
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={shareData}
+                    readOnly
+                    className="flex-1 px-3 py-2 border border-border rounded-lg bg-muted text-foreground text-sm"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(shareData)}
+                    className="px-3 py-2 bg-foreground text-background rounded-lg hover:bg-foreground/90 transition-colors"
+                    title="Copy to clipboard"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                </div>
+                
+                <p className="text-sm text-muted-foreground">
+                  💡 Tip: Open this link on your other device's browser to automatically import this blog post!
+                </p>
+              </div>
             </div>
           </div>
         </div>
