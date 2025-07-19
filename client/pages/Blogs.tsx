@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
-import { Plus, Calendar, Clock, X, Image, Trash2, ArrowLeft, Edit, Loader2 } from "lucide-react";
+import { Plus, Calendar, Clock, X, Image, Trash2, ArrowLeft, Edit, Loader2, Eye, Code } from "lucide-react";
 import { 
   BlogPost, 
   addBlogPost, 
@@ -9,6 +9,8 @@ import {
   subscribeToBlogPosts 
 } from "@/lib/blogService";
 import { useAuth } from "@/contexts/AuthContext";
+import DOMPurify from 'dompurify';
+import '../blog-content.css';
 
 // Helper function to calculate read time
 const calculateReadTime = (content: string): string => {
@@ -25,6 +27,7 @@ export default function Blogs() {
   const [editingBlog, setEditingBlog] = useState<BlogPost | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     excerpt: "",
@@ -34,6 +37,16 @@ export default function Blogs() {
 
   // Get authentication state
   const { isAdmin } = useAuth();
+
+  // Safely render HTML content
+  const renderHTMLContent = (htmlContent: string) => {
+    const sanitizedContent = DOMPurify.sanitize(htmlContent, {
+      ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre', 'img', 'div', 'span'],
+      ALLOWED_ATTR: ['href', 'target', 'rel', 'src', 'alt', 'class', 'style'],
+      ALLOW_DATA_ATTR: false
+    });
+    return { __html: sanitizedContent };
+  };
 
   // Subscribe to real-time updates from Firestore
   useEffect(() => {
@@ -78,6 +91,7 @@ export default function Blogs() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingBlog(null);
+    setIsPreviewMode(false);
     setFormData({
       title: "",
       excerpt: "",
@@ -294,11 +308,10 @@ export default function Blogs() {
                 </div>
 
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  {selectedBlog.content.split('\n').map((paragraph, index) => (
-                    <p key={index} className="mb-4 text-foreground leading-relaxed">
-                      {paragraph}
-                    </p>
-                  ))}
+                  <div 
+                    className="blog-content text-foreground leading-relaxed"
+                    dangerouslySetInnerHTML={renderHTMLContent(selectedBlog.content)}
+                  />
                 </div>
               </div>
             </div>
@@ -443,17 +456,79 @@ export default function Blogs() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Content *
-                    </label>
-                    <textarea
-                      name="content"
-                      value={formData.content}
-                      onChange={handleInputChange}
-                      rows={12}
-                      className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
-                      required
-                    />
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-foreground">
+                        Content * (HTML supported)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsPreviewMode(!isPreviewMode)}
+                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {isPreviewMode ? (
+                          <>
+                            <Code className="h-4 w-4" />
+                            Edit
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="h-4 w-4" />
+                            Preview
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    
+                    {/* HTML Quick Guide */}
+                    {!isPreviewMode && (
+                      <div className="mb-3 p-3 bg-muted/50 rounded-md border text-sm">
+                        <details>
+                          <summary className="cursor-pointer font-medium text-foreground mb-2">Quick HTML Guide</summary>
+                          <div className="text-muted-foreground space-y-1">
+                            <div><code>&lt;p&gt;Paragraph&lt;/p&gt;</code></div>
+                            <div><code>&lt;strong&gt;Bold&lt;/strong&gt;</code> or <code>&lt;b&gt;Bold&lt;/b&gt;</code></div>
+                            <div><code>&lt;em&gt;Italic&lt;/em&gt;</code> or <code>&lt;i&gt;Italic&lt;/i&gt;</code></div>
+                            <div><code>&lt;a href="https://example.com" target="_blank"&gt;Link&lt;/a&gt;</code></div>
+                            <div><code>&lt;h2&gt;Heading&lt;/h2&gt;</code> (h1-h6 available)</div>
+                            <div><code>&lt;ul&gt;&lt;li&gt;List item&lt;/li&gt;&lt;/ul&gt;</code></div>
+                            <div><code>&lt;blockquote&gt;Quote&lt;/blockquote&gt;</code></div>
+                            <div><code>&lt;code&gt;Code&lt;/code&gt;</code></div>
+                          </div>
+                        </details>
+                      </div>
+                    )}
+                    
+                    {isPreviewMode ? (
+                      <div className="w-full min-h-[300px] px-3 py-2 border border-border rounded-md bg-accent/20">
+                        <div className="prose prose-neutral dark:prose-invert max-w-none">
+                          <div 
+                            className="blog-content"
+                            dangerouslySetInnerHTML={renderHTMLContent(formData.content || '<p className="text-muted-foreground">Start typing to see preview...</p>')}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <textarea
+                        name="content"
+                        value={formData.content}
+                        onChange={handleInputChange}
+                        rows={12}
+                        className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground font-mono text-sm"
+                        placeholder="Write your blog content here. HTML is supported!
+
+Examples:
+<p>This is a paragraph with <strong>bold text</strong> and <em>italic text</em>.</p>
+<a href='https://example.com' target='_blank'>This is a link</a>
+<ul>
+  <li>List item 1</li>
+  <li>List item 2</li>
+</ul>
+
+<h3>This is a heading</h3>
+<blockquote>This is a quote</blockquote>"
+                        required
+                      />
+                    )}
                   </div>
 
                   <div>
