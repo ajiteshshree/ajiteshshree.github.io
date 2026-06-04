@@ -30,6 +30,8 @@ jobs:
 
       - name: Build
         run: npm run build:gh-pages
+        env:
+          VITE_RESUME_URL: ${{ vars.VITE_RESUME_URL }}
 
       - name: Copy 404.html for SPA routing
         run: cp ./dist/spa/index.html ./dist/spa/404.html

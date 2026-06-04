@@ -1,5 +1,6 @@
 import { Download } from "lucide-react";
 import Navigation from "@/components/Navigation";
+import { isExternalResume, resumeUrl } from "@/lib/resume";
 
 export default function Index() {
   return (
@@ -33,8 +34,10 @@ export default function Index() {
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <a
-                  href="/resume.pdf"
-                  download="Ajitesh_Resume.pdf"
+                  href={resumeUrl}
+                  {...(!isExternalResume
+                    ? { download: "Ajitesh_Resume.pdf" }
+                    : { target: "_blank", rel: "noopener noreferrer" })}
                   className="inline-flex items-center px-6 py-3 border border-border hover:bg-accent text-foreground rounded-lg font-medium transition-colors"
                 >
                   <Download className="mr-2 h-4 w-4" />
