@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
-import { Plus, Calendar, Clock, X, Image, Trash2, ArrowLeft, Edit, Loader2, Eye, Code } from "lucide-react";
+import { Plus, Calendar, Clock, X, Image, Trash2, ArrowLeft, Edit, Loader2, Eye, Code, Share2, Check } from "lucide-react";
 import { 
   BlogPost, 
   addBlogPost, 
@@ -28,6 +28,7 @@ export default function Blogs() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     excerpt: "",
@@ -55,6 +56,15 @@ export default function Blogs() {
       console.log('Received posts from Firestore:', posts.length);
       setBlogs(posts);
       setLoading(false);
+
+      // Open a blog directly if a shareable link (?blog=<id>) was used
+      const blogId = new URLSearchParams(window.location.search).get('blog');
+      if (blogId) {
+        const linkedBlog = posts.find((post) => post.id === blogId);
+        if (linkedBlog) {
+          setSelectedBlog(linkedBlog);
+        }
+      }
     });
 
     // Cleanup subscription on unmount
@@ -196,10 +206,42 @@ export default function Blogs() {
 
   const handleReadMore = (blog: BlogPost) => {
     setSelectedBlog(blog);
+    const url = new URL(window.location.href);
+    url.pathname = '/blogs';
+    url.search = `?blog=${blog.id}`;
+    window.history.replaceState(null, '', url.toString());
   };
 
   const handleBackToList = () => {
     setSelectedBlog(null);
+    const url = new URL(window.location.href);
+    url.search = '';
+    window.history.replaceState(null, '', url.toString());
+  };
+
+  const handleShare = async (blog: BlogPost) => {
+    const url = new URL(window.location.href);
+    url.pathname = '/blogs';
+    url.search = `?blog=${blog.id}`;
+    url.hash = '';
+    const shareUrl = url.toString();
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+    } catch {
+      // Fallback for browsers without clipboard API
+      const textarea = document.createElement('textarea');
+      textarea.value = shareUrl;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
   };
 
   if (loading) {
@@ -255,13 +297,32 @@ export default function Blogs() {
             <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-4xl h-[90vh] flex flex-col">
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-border">
-                <button
-                  onClick={handleBackToList}
-                  className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to posts
-                </button>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={handleBackToList}
+                    className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to posts
+                  </button>
+                  <button
+                    onClick={() => handleShare(selectedBlog)}
+                    className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                    title="Copy shareable link"
+                  >
+                    {linkCopied ? (
+                      <>
+                        <Check className="h-4 w-4" />
+                        Link copied!
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className="h-4 w-4" />
+                        Share
+                      </>
+                    )}
+                  </button>
+                </div>
                 {isAdmin && (
                   <div className="flex items-center gap-2">
                     <button
